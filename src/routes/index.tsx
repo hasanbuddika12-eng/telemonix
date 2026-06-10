@@ -262,12 +262,43 @@ function Index() {
             <Card className="border-white/10 bg-white/5 backdrop-blur">
               <CardContent className="p-4 flex items-center gap-3">
                 <TrendingUp className="h-5 w-5 text-emerald-400" />
-                <div className="text-sm">
+                <div className="text-sm flex-1">
                   <p className="font-medium">Earnings from views</p>
                   <p className="text-xs text-muted-foreground">${stats.earned.toFixed(4)} from {stats.totalViews.toLocaleString()} views</p>
                 </div>
+                <Button size="sm" variant="outline" className="bg-white/5 border-white/20"
+                  disabled={syncMut.isPending} onClick={() => syncMut.mutate()}>
+                  {syncMut.isPending ? "Syncing..." : "Sync views"}
+                </Button>
               </CardContent>
             </Card>
+
+            {isAdmin && (
+              <Card className="border-amber-400/20 bg-gradient-to-br from-amber-500/10 to-pink-500/10 backdrop-blur">
+                <CardHeader className="pb-2"><CardTitle className="text-base flex items-center gap-2"><Sparkles className="h-4 w-4 text-amber-300" />CPM rate</CardTitle></CardHeader>
+                <CardContent className="space-y-2">
+                  <p className="text-xs text-muted-foreground">Rate paid per 1,000 views. Allowed: $0.80 – $1.00</p>
+                  <div className="flex gap-2 items-center">
+                    <span className="text-sm text-muted-foreground">$</span>
+                    <Input type="number" step="0.01" min="0.8" max="1" value={cpmInput}
+                      onChange={(e) => setCpmInput(e.target.value)}
+                      className="bg-white/5 border-white/10" />
+                    <Button size="sm" disabled={cpmMut.isPending} onClick={() => cpmMut.mutate(Number(cpmInput))}
+                      className="bg-gradient-to-r from-amber-500 to-pink-500 border-0">
+                      Save
+                    </Button>
+                  </div>
+                  <div className="flex gap-1.5 pt-1">
+                    {[0.8, 0.9, 1.0].map((v) => (
+                      <Button key={v} size="sm" variant="outline" className="bg-white/5 border-white/20 h-7 text-xs"
+                        onClick={() => { setCpmInput(String(v)); cpmMut.mutate(v); }}>
+                        ${v.toFixed(2)}
+                      </Button>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
           </TabsContent>
 
           {/* CHANNELS */}
