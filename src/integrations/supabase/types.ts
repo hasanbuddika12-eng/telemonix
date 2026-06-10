@@ -14,6 +14,39 @@ export type Database = {
   }
   public: {
     Tables: {
+      profiles: {
+        Row: {
+          balance_usd: number
+          created_at: string
+          first_name: string | null
+          last_name: string | null
+          photo_url: string | null
+          telegram_user_id: number
+          updated_at: string
+          username: string | null
+        }
+        Insert: {
+          balance_usd?: number
+          created_at?: string
+          first_name?: string | null
+          last_name?: string | null
+          photo_url?: string | null
+          telegram_user_id: number
+          updated_at?: string
+          username?: string | null
+        }
+        Update: {
+          balance_usd?: number
+          created_at?: string
+          first_name?: string | null
+          last_name?: string | null
+          photo_url?: string | null
+          telegram_user_id?: number
+          updated_at?: string
+          username?: string | null
+        }
+        Relationships: []
+      }
       saved_posts: {
         Row: {
           button_color: string | null
@@ -47,11 +80,54 @@ export type Database = {
         }
         Relationships: []
       }
+      sent_messages: {
+        Row: {
+          channel_id: string | null
+          chat_id: string
+          id: string
+          message_id: number | null
+          owner_id: number
+          sent_at: string
+          text: string | null
+          views: number
+        }
+        Insert: {
+          channel_id?: string | null
+          chat_id: string
+          id?: string
+          message_id?: number | null
+          owner_id: number
+          sent_at?: string
+          text?: string | null
+          views?: number
+        }
+        Update: {
+          channel_id?: string | null
+          chat_id?: string
+          id?: string
+          message_id?: number | null
+          owner_id?: number
+          sent_at?: string
+          text?: string | null
+          views?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sent_messages_channel_id_fkey"
+            columns: ["channel_id"]
+            isOneToOne: false
+            referencedRelation: "telegram_channels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       telegram_channels: {
         Row: {
           chat_id: string
           created_at: string
           id: string
+          members_count: number
+          owner_id: number | null
           title: string
           username: string | null
         }
@@ -59,6 +135,8 @@ export type Database = {
           chat_id: string
           created_at?: string
           id?: string
+          members_count?: number
+          owner_id?: number | null
           title: string
           username?: string | null
         }
@@ -66,6 +144,8 @@ export type Database = {
           chat_id?: string
           created_at?: string
           id?: string
+          members_count?: number
+          owner_id?: number | null
           title?: string
           username?: string | null
         }
