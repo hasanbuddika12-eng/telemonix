@@ -105,7 +105,7 @@ export const broadcast = createServerFn({ method: "POST" })
           fd.append("caption", data.text || "");
           fd.append("parse_mode", "HTML");
           if (reply_markup) fd.append("reply_markup", JSON.stringify(reply_markup));
-          fd.append("photo", new Blob([bin]), "image.jpg");
+          fd.append("photo", new Blob([bin], { type: "image/jpeg" }), "image.jpg");
           const r = await fetch(`${TG_API}/bot${token()}/sendPhoto`, { method: "POST", body: fd });
           resp = await r.json();
         } else {
