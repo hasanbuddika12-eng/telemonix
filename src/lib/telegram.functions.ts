@@ -36,10 +36,13 @@ export const addChannel = createServerFn({ method: "POST" })
     if (!info.ok) throw new Error(info.description || "Could not find channel. Add the bot as admin first.");
 
     const me = await tg("getMe", {});
-    const admins = await tg("getChatAdministrators", { chat_id: info.result.id });
-    if (!admins.ok) throw new Error(admins.description || "Bot must be an admin of the channel.");
-    const isAdmin = admins.result.some((a: any) => a.user?.id === me.result?.id);
-    if (!isAdmin) throw new Error("Bot is not an admin in this channel. Make @Postmaster21Bot an admin first.");
+    if (!me.ok) throw new Error(me.description || "Bot token invalid");
+    const member = await tg("getChatMember", { chat_id: info.result.id, user_id: me.result.id });
+    if (!member.ok) throw new Error(member.description || "Add @Postmaster21Bot to the channel first.");
+    const status = member.result?.status;
+    if (status !== "administrator" && status !== "creator") {
+      throw new Error("Bot is not an admin in this channel. Make @Postmaster21Bot an admin first.");
+    }
 
     const sb = await getAdmin();
     const { data: row, error } = await sb
