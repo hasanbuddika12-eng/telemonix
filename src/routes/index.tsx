@@ -239,7 +239,7 @@ function Index() {
                   <span className="text-xs uppercase tracking-wider">Wallet Balance</span>
                 </div>
                 <p className="text-4xl font-bold tracking-tight">${balance.toFixed(2)}</p>
-                <p className="text-xs text-muted-foreground mt-1">Earn $0.05 for every 100 views</p>
+                <p className="text-xs text-muted-foreground mt-1">CPM ${(me?.cpm ?? 1).toFixed(2)} · earn per 1,000 views</p>
                 <div className="grid grid-cols-2 gap-2 mt-4">
                   <Button variant="outline" className="bg-white/5 border-white/20 hover:bg-white/10" onClick={() => toast.info("Deposit — coming soon")}>
                     <ArrowDownToLine className="h-4 w-4 mr-1" /> Deposit
