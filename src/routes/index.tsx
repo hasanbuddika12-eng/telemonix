@@ -78,9 +78,12 @@ function Index() {
     mutationFn: () => sendFn({ data: { text, imageBase64, buttonText: buttonText || null, buttonUrl: buttonUrl || null } }),
     onSuccess: (res) => {
       const ok = res.results.filter((r) => r.ok).length;
-      const fail = res.results.length - ok;
-      if (fail === 0) toast.success(`Sent to ${ok} channel${ok === 1 ? "" : "s"}`);
-      else toast.warning(`Sent: ${ok} · Failed: ${fail}`);
+      const failed = res.results.filter((r) => !r.ok);
+      if (failed.length === 0) toast.success(`Sent to ${ok} channel${ok === 1 ? "" : "s"}`);
+      else {
+        const first = failed[0];
+        toast.error(`Sent: ${ok} · Failed: ${failed.length}. ${first.chat_id}: ${first.error}`, { duration: 10000 });
+      }
     },
     onError: (e: any) => toast.error(e.message),
   });
