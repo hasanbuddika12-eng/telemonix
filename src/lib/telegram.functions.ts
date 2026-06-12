@@ -610,21 +610,32 @@ export const distributeAds = createServerFn({ method: "POST" })
   });
 
 // =============== Click attribution + earnings ===============
-export async function recordAdClick(placementId: string) {
+// `userId` defaults to a synthetic anonymous-bucket key per ip-less request when unknown,
+// but we always pass the Telegram user id when available (mini app open).
+export async function recordAdClick(placementId: string, userIdRaw?: string | number | null, source: "button" | "link" = "button") {
   const sb = await getAdmin();
   const { data: p } = await sb.from("ad_placements").select("*, ad_campaigns(*)").eq("id", placementId).maybeSingle();
   if (!p) return null;
   const c: any = p.ad_campaigns;
   if (!c) return null;
 
-  const newClicks = (p.clicks || 0) + 1;
-  // Estimate +1 view alongside each click to keep views >= clicks (Bot API has no view feed)
-  const newViews = Math.max(p.views || 0, newClicks);
-  await sb.from("ad_placements").update({ clicks: newClicks, views: newViews }).eq("id", placementId);
+  const userId = Number(userIdRaw) || 0;
+  const redirectUrl = source === "link" ? null : c.button_url;
+  // Dedupe: count at most 1 click per (placement, user). Anonymous (user=0) always counted (fallback).
+  let isNew = true;
+  if (userId) {
+    const { error } = await sb.from("ad_clicks").insert({ placement_id: placementId, user_id: userId, source });
+    if (error) isNew = false; // unique-violation -> already clicked
+  }
+  if (!isNew) return { url: redirectUrl ?? c.button_url };
 
-  // Update campaign totals
+  const newClicks = (p.clicks || 0) + 1;
+  const newUnique = (p.unique_clicks || 0) + 1;
+  const newViews = Math.max(p.views || 0, newClicks);
+  await sb.from("ad_placements").update({ clicks: newClicks, unique_clicks: newUnique, views: newViews }).eq("id", placementId);
+
   const totalClicks = (c.clicks_count || 0) + 1;
-  const totalViews = (c.views_count || 0) + 1; // increment view too
+  const totalViews = (c.views_count || 0) + 1;
   const settings = await getSettings();
   const earnedThisClick = Number(c.click_rate_usd) + Number(c.view_rate_usd);
   const spent = Number(c.spent_usd || 0) + earnedThisClick;
@@ -636,25 +647,61 @@ export async function recordAdClick(placementId: string) {
     completed_at: done ? new Date().toISOString() : null,
   }).eq("id", c.id);
 
-  // Pay publisher
   const { data: ch } = await sb.from("telegram_channels").select("owner_id, accumulated_usd, title").eq("id", p.channel_id).single();
   if (ch?.owner_id) {
     const pubShare = earnedThisClick * (settings.publisher_share_pct / 100);
     await sb.from("telegram_channels").update({ accumulated_usd: Number(ch.accumulated_usd || 0) + pubShare }).eq("id", p.channel_id);
+    await sb.from("profiles").update({ publisher_balance_usd: undefined as any }).eq("telegram_user_id", ch.owner_id).then(() => undefined).catch(() => undefined);
+    // Atomic-ish increment of publisher balance
+    const { data: prof } = await sb.from("profiles").select("publisher_balance_usd").eq("telegram_user_id", ch.owner_id).maybeSingle();
+    await sb.from("profiles").update({ publisher_balance_usd: Number(prof?.publisher_balance_usd || 0) + pubShare }).eq("telegram_user_id", ch.owner_id);
     await sb.from("earnings_ledger").insert({ user_id: ch.owner_id, channel_id: p.channel_id, campaign_id: c.id, type: "publisher_click", amount_usd: pubShare });
-    // referral
     const { data: refRow } = await sb.from("profiles").select("referrer_id").eq("telegram_user_id", ch.owner_id).maybeSingle();
     if (refRow?.referrer_id) {
       const refAmt = pubShare * (settings.referral_pct / 100);
+      const { data: refProf } = await sb.from("profiles").select("publisher_balance_usd").eq("telegram_user_id", refRow.referrer_id).maybeSingle();
+      await sb.from("profiles").update({ publisher_balance_usd: Number(refProf?.publisher_balance_usd || 0) + refAmt }).eq("telegram_user_id", refRow.referrer_id);
       await sb.from("earnings_ledger").insert({ user_id: refRow.referrer_id, channel_id: p.channel_id, campaign_id: c.id, type: "referral", amount_usd: refAmt });
     }
   }
 
-  // If complete -> delete all placements
   if (done) await deleteCampaignMessages(c.id);
-
-  return { url: c.button_url };
+  return { url: redirectUrl ?? c.button_url };
 }
+
+// Admin broadcast post click — same dedupe model, pays publisher CPC × pub_share when channel owner exists.
+export async function recordPostClick(messageId: string, userIdRaw?: string | number | null, source: "button" | "link" = "button", linkTarget?: string | null) {
+  const sb = await getAdmin();
+  const { data: m } = await sb.from("sent_messages").select("*").eq("id", messageId).maybeSingle();
+  if (!m) return null;
+  const userId = Number(userIdRaw) || 0;
+  const redirectUrl = source === "link" ? (linkTarget || m.button_url) : m.button_url;
+  let isNew = true;
+  if (userId) {
+    const { error } = await sb.from("post_clicks").insert({ sent_message_id: messageId, user_id: userId, source });
+    if (error) isNew = false;
+  }
+  if (!isNew) return { url: redirectUrl };
+
+  const newClicks = (m.clicks || 0) + 1;
+  const newUnique = (m.unique_clicks || 0) + 1;
+  await sb.from("sent_messages").update({ clicks: newClicks, unique_clicks: newUnique, views: Math.max(m.views || 0, newClicks) }).eq("id", messageId);
+
+  // Pay publisher: admin-defined CPC × publisher share
+  if (m.channel_id && m.owner_id && Number(m.cpc_usd || 0) > 0) {
+    const settings = await getSettings();
+    const pubShare = Number(m.cpc_usd) * (settings.publisher_share_pct / 100);
+    const { data: ch } = await sb.from("telegram_channels").select("accumulated_usd, owner_id").eq("id", m.channel_id).maybeSingle();
+    if (ch?.owner_id) {
+      await sb.from("telegram_channels").update({ accumulated_usd: Number(ch.accumulated_usd || 0) + pubShare }).eq("id", m.channel_id);
+      const { data: prof } = await sb.from("profiles").select("publisher_balance_usd").eq("telegram_user_id", ch.owner_id).maybeSingle();
+      await sb.from("profiles").update({ publisher_balance_usd: Number(prof?.publisher_balance_usd || 0) + pubShare }).eq("telegram_user_id", ch.owner_id);
+      await sb.from("earnings_ledger").insert({ user_id: ch.owner_id, channel_id: m.channel_id, type: "publisher_click", amount_usd: pubShare });
+    }
+  }
+  return { url: redirectUrl };
+}
+
 
 async function deleteCampaignMessages(campaignId: string) {
   const sb = await getAdmin();
