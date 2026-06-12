@@ -10,7 +10,13 @@ export const Route = createFileRoute("/api/public/t/$id")({
         const src = (url.searchParams.get("src") === "link" ? "link" : "button") as "link" | "button";
         const u = url.searchParams.get("u"); // telegram user id (set by mini-app shim)
         const to = url.searchParams.get("to"); // for in-text link rewriting
-        try {
+        // Synthetic per-visitor id when no Telegram user id is present.
+        // Stable per (ip, user-agent) — enough to dedupe casual repeat clicks.
+        const ip = request.headers.get("cf-connecting-ip") || request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "0";
+        const ua = request.headers.get("user-agent") || "";
+        const { createHash } = await import("crypto");
+        const synthUid = u || BigInt("0x" + createHash("sha1").update(ip + "|" + ua).digest("hex").slice(0, 12)).toString();
+
           if (kind === "ad") {
             const { recordAdClick } = await import("@/lib/telegram.functions");
             const r = await recordAdClick(id, u, src);
