@@ -651,8 +651,8 @@ export async function recordAdClick(placementId: string, userIdRaw?: string | nu
   if (ch?.owner_id) {
     const pubShare = earnedThisClick * (settings.publisher_share_pct / 100);
     await sb.from("telegram_channels").update({ accumulated_usd: Number(ch.accumulated_usd || 0) + pubShare }).eq("id", p.channel_id);
-    await sb.from("profiles").update({ publisher_balance_usd: undefined as any }).eq("telegram_user_id", ch.owner_id).then(() => undefined).catch(() => undefined);
     // Atomic-ish increment of publisher balance
+
     const { data: prof } = await sb.from("profiles").select("publisher_balance_usd").eq("telegram_user_id", ch.owner_id).maybeSingle();
     await sb.from("profiles").update({ publisher_balance_usd: Number(prof?.publisher_balance_usd || 0) + pubShare }).eq("telegram_user_id", ch.owner_id);
     await sb.from("earnings_ledger").insert({ user_id: ch.owner_id, channel_id: p.channel_id, campaign_id: c.id, type: "publisher_click", amount_usd: pubShare });
