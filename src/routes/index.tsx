@@ -342,7 +342,7 @@ function ChannelCard({ c, onDelete }: any) {
 }
 
 function ReferTab({ me }: any) {
-  const link = `https://t.me/${me.bot_username}/app?startapp=ref_${me.referral.code}`;
+  const link = `https://t.me/${me.bot_username}?startapp=ref_${me.referral.code}`;
   return (
     <>
       <Card className="border-0 bg-gradient-to-br from-purple-500/20 to-pink-500/20 ring-1 ring-purple-400/20">
