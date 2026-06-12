@@ -17,16 +17,17 @@ export const Route = createFileRoute("/api/public/t/$id")({
         const { createHash } = await import("crypto");
         const synthUid = u || BigInt("0x" + createHash("sha1").update(ip + "|" + ua).digest("hex").slice(0, 12)).toString();
 
+        try {
           if (kind === "ad") {
             const { recordAdClick } = await import("@/lib/telegram.functions");
-            const r = await recordAdClick(id, u, src);
+            const r = await recordAdClick(id, synthUid, src);
             const target = src === "link" && to ? decodeURIComponent(to) : r?.url;
             if (!target) return new Response("Not found", { status: 404 });
             return new Response(null, { status: 302, headers: { Location: target } });
           }
           if (kind === "post") {
             const { recordPostClick } = await import("@/lib/telegram.functions");
-            const r = await recordPostClick(id, u, src, to ? decodeURIComponent(to) : null);
+            const r = await recordPostClick(id, synthUid, src, to ? decodeURIComponent(to) : null);
             if (!r?.url) return new Response("Not found", { status: 404 });
             return new Response(null, { status: 302, headers: { Location: r.url } });
           }
@@ -40,6 +41,7 @@ export const Route = createFileRoute("/api/public/t/$id")({
             views: Math.max(row.views || 0, (row.clicks || 0) + 1),
           }).eq("id", id);
           return new Response(null, { status: 302, headers: { Location: row.button_url } });
+
         } catch (e: any) {
           return new Response("Error: " + e.message, { status: 500 });
         }
