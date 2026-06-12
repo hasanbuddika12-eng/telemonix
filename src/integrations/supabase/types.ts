@@ -97,6 +97,38 @@ export type Database = {
           },
         ]
       }
+      ad_clicks: {
+        Row: {
+          created_at: string
+          id: string
+          placement_id: string
+          source: string
+          user_id: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          placement_id: string
+          source?: string
+          user_id: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          placement_id?: string
+          source?: string
+          user_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ad_clicks_placement_id_fkey"
+            columns: ["placement_id"]
+            isOneToOne: false
+            referencedRelation: "ad_placements"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ad_placements: {
         Row: {
           campaign_id: string
@@ -105,8 +137,10 @@ export type Database = {
           clicks: number
           deleted_at: string | null
           id: string
+          link_map: Json | null
           message_id: number | null
           sent_at: string
+          unique_clicks: number
           views: number
         }
         Insert: {
@@ -116,8 +150,10 @@ export type Database = {
           clicks?: number
           deleted_at?: string | null
           id?: string
+          link_map?: Json | null
           message_id?: number | null
           sent_at?: string
+          unique_clicks?: number
           views?: number
         }
         Update: {
@@ -127,8 +163,10 @@ export type Database = {
           clicks?: number
           deleted_at?: string | null
           id?: string
+          link_map?: Json | null
           message_id?: number | null
           sent_at?: string
+          unique_clicks?: number
           views?: number
         }
         Relationships: [
@@ -268,6 +306,38 @@ export type Database = {
         }
         Relationships: []
       }
+      post_clicks: {
+        Row: {
+          created_at: string
+          id: string
+          sent_message_id: string
+          source: string
+          user_id: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          sent_message_id: string
+          source?: string
+          user_id: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          sent_message_id?: string
+          source?: string
+          user_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "post_clicks_sent_message_id_fkey"
+            columns: ["sent_message_id"]
+            isOneToOne: false
+            referencedRelation: "sent_messages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           advertiser_balance_usd: number
@@ -345,31 +415,40 @@ export type Database = {
           button_color: string | null
           button_text: string | null
           button_url: string | null
+          cpc_usd: number
+          cpm_usd: number
           created_at: string
           id: string
           image_base64: string | null
           text: string
           updated_at: string
+          watermark: boolean
         }
         Insert: {
           button_color?: string | null
           button_text?: string | null
           button_url?: string | null
+          cpc_usd?: number
+          cpm_usd?: number
           created_at?: string
           id?: string
           image_base64?: string | null
           text?: string
           updated_at?: string
+          watermark?: boolean
         }
         Update: {
           button_color?: string | null
           button_text?: string | null
           button_url?: string | null
+          cpc_usd?: number
+          cpm_usd?: number
           created_at?: string
           id?: string
           image_base64?: string | null
           text?: string
           updated_at?: string
+          watermark?: boolean
         }
         Relationships: []
       }
@@ -380,12 +459,17 @@ export type Database = {
           channel_id: string | null
           chat_id: string
           clicks: number
+          cpc_usd: number
+          cpm_usd: number
           id: string
+          link_map: Json | null
           message_id: number | null
           owner_id: number
           sent_at: string
           text: string | null
+          unique_clicks: number
           views: number
+          watermark: boolean
         }
         Insert: {
           button_url?: string | null
@@ -393,12 +477,17 @@ export type Database = {
           channel_id?: string | null
           chat_id: string
           clicks?: number
+          cpc_usd?: number
+          cpm_usd?: number
           id?: string
+          link_map?: Json | null
           message_id?: number | null
           owner_id: number
           sent_at?: string
           text?: string | null
+          unique_clicks?: number
           views?: number
+          watermark?: boolean
         }
         Update: {
           button_url?: string | null
@@ -406,12 +495,17 @@ export type Database = {
           channel_id?: string | null
           chat_id?: string
           clicks?: number
+          cpc_usd?: number
+          cpm_usd?: number
           id?: string
+          link_map?: Json | null
           message_id?: number | null
           owner_id?: number
           sent_at?: string
           text?: string | null
+          unique_clicks?: number
           views?: number
+          watermark?: boolean
         }
         Relationships: [
           {
